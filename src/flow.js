@@ -212,16 +212,9 @@ export const getNextScreen = async (decryptedBody) => {
       // handles when user submits USER_DATA screen
       case "USER_DATA":
         console.log("data exchange for USER DATA:")
-        /*console.log("name: ", data.name)*/
-        console.log("identity type: ", data.document_type)
         const identityMap = new Map(documentTypeDictionary);
-        const documentType = identityMap.get(data.document_type)
-        const identityNumber = documentType + data.identity
+        const identityNumber = identityMap.get(data.document_type) + data.identity
         console.log("full identity: ", identityNumber)
-        /*console.log("identity: ", data.identity)
-        console.log("bank: ", data.bank)
-        console.log("phone: ", data.phone)
-        console.log("amount: ", data.amount)*/
         return {
           ...SCREEN_RESPONSES.OTP_CHECK,
           data: {
