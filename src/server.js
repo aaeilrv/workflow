@@ -5,12 +5,32 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import https from 'https';
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
 import express from "express";
 import { decryptRequest, encryptResponse, FlowEndpointException } from "./encryption.js";
 import { getNextScreen } from "./flow.js";
 import crypto from "crypto";
 
 const app = express();
+
+// Get __dirname in ES Modules
+/*const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+var credentials = {
+  key: fs.readFileSync(path.join(__dirname, '../cert', 'privkey.pem')),
+  cert: fs.readFileSync(path.join(__dirname, '../cert', 'cert.pem'))
+};
+
+var server = https.createServer(credentials, app);
+server.listen(3443, () => {
+  console.log("secure server starting on port : " + 3443)
+});*/
 
 app.use(
   express.json({
@@ -47,7 +67,7 @@ app.post("/", async (req, res) => {
 
   let decryptedRequest = null;
   try {
-    decryptedRequest = decryptRequest(req.body, PRIVATE_KEY, PASSPHRASE);
+    decryptedRequest = decryptRequest(req.body, PRIVATE_KEY.replace(/\\n/g, "\n"), PASSPHRASE);
   } catch (err) {
     console.error(err);
     if (err instanceof FlowEndpointException) {
@@ -58,13 +78,14 @@ app.post("/", async (req, res) => {
 
   const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest;
   console.log("💬 Decrypted Request:", decryptedBody);
+  console.log('flow token: ', decryptedBody.flow_token)
 
   // TODO: Uncomment this block and add your flow token validation logic.
   // If the flow token becomes invalid, return HTTP code 427 to disable the flow and show the message in `error_msg` to the user
   // Refer to the docs for details https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes#endpoint_error_codes
 
-  /*
-  if (!isValidFlowToken(decryptedBody.flow_token)) {
+  
+  /*if (!isValidFlowToken(decryptedBody.flow_token)) {
     const error_response = {
       error_msg: `The message is no longer available`,
     };
@@ -73,8 +94,7 @@ app.post("/", async (req, res) => {
       .send(
         encryptResponse(error_response, aesKeyBuffer, initialVectorBuffer)
       );
-  }
-  */
+  }*/
 
   const screenResponse = await getNextScreen(decryptedBody);
   console.log("👉 Response to Encrypt:", screenResponse);
@@ -98,11 +118,6 @@ function isRequestSignatureValid(req) {
   }
 
   const signatureHeader = req.get("x-hub-signature-256");
-  if (!signatureHeader) {
-    console.error("Missing x-hub-signature-256 header");
-    return false; // or throw an error
-  }
-
   const signatureBuffer = Buffer.from(signatureHeader.replace("sha256=", ""), "utf-8");
 
   const hmac = crypto.createHmac("sha256", APP_SECRET);
